@@ -75,6 +75,9 @@ namespace FixFuzzer
                     // Use this message...
                     // Add back the beginString
                     String testMessage = beginString + msg;
+                    Match getridoffluff = Regex.Match(testMessage, @".*10=\d+" + getSoh());
+            		testMessage = getridoffluff.Value;
+            		
                     Console.WriteLine("[INFO] - Got Message: " + testMessage);
 
                     // Split message on the separator (SOH)
@@ -91,7 +94,7 @@ namespace FixFuzzer
                             //First see if it is a logon message (if we don't already have one)
                             if (String.IsNullOrEmpty(logonMessage) && part.Equals("35=A")) // LOGON MESSAGE
                             {
-                                logonMessage = msg;
+                                logonMessage = testMessage;
                                 Console.WriteLine("[INFO] - Logon Message Detected (skipping)");
                                 break;
                             }
@@ -116,7 +119,7 @@ namespace FixFuzzer
                                     String newPart = Regex.Replace(part, "=.*", "=" + fuzz);
                                     String fuzzMessage = testMessage.Replace(part, newPart);
                                     Console.WriteLine("[INFO] - Sending Fuzzed Tag: " + newPart);
-                                    sendFuzzMessage(args[0], int.Parse(args[1]), ref sequence, ref ordId, logonMessage, fuzzMessage, testMessage);
+                                    sendFuzzMessage(args[0], int.Parse(args[1]), ref sequence, ref ordId, logonMessage, fuzzMessage, testMessage, part);
                                     Console.WriteLine();
 
                                     //Deliberately pause for 500ms as a courtesy to the server
@@ -182,7 +185,7 @@ namespace FixFuzzer
             return "\"" + str + "\"";
         }
 
-        static void sendFuzzMessage(String host, int port, ref int sequence, ref int ordId, String logonMsg, String fuzzMsg, String Original)
+        static void sendFuzzMessage(String host, int port, ref int sequence, ref int ordId, String logonMsg, String fuzzMsg, String Original, String part)
         {
 
             TcpClient client = null; 
@@ -210,6 +213,13 @@ namespace FixFuzzer
                     sequence = Convert.ToInt32((Regex.Split(Regex.Split(fuzzResponse, sequenceError)[1], getSoh()))[0]);
                     Console.WriteLine("[INFO] - Sequence Number Mismatch.  Changing Sequence To: " + sequence);
                 }
+                //Look for sequence reset.  If found, update sequence 
+                if (Regex.IsMatch(fuzzResponse, getSoh() + @"141=Y" + getSoh()))
+                {
+                    sequence = 1;
+                    Console.WriteLine("[INFO] - Sequence Number Rest.  Changing Sequence To: " + sequence);
+                    break;
+                }
                 //Look for Empty Response
                 else if (String.IsNullOrEmpty(fuzzResponse) || Regex.IsMatch(fuzzResponse, @"Empty String"))
                 {
@@ -231,7 +241,12 @@ namespace FixFuzzer
             #endregion
 
             //Send Fuzz Message
-            fuzzMsg = updateTimeSequenceChecksum(fuzzMsg, ++sequence, ++ordId);
+            if  (part.StartsWith("11="))
+            {
+            	fuzzMsg = updateTimeSequenceChecksum(fuzzMsg, ++sequence, ++ordId, false);
+            } else {
+            	fuzzMsg = updateTimeSequenceChecksum(fuzzMsg, ++sequence, ++ordId);
+            }
             Console.WriteLine("[INFO] - Sending Fuzz Message: " + fuzzMsg);
             DateTime testTime = DateTime.Now;
             sendData(client, stream, fuzzMsg, out fuzzResponse);
@@ -400,16 +415,21 @@ namespace FixFuzzer
             return fuzzList;
         }
 
-        static String updateTimeSequenceChecksum(String fixMessage, int seqNum, int ordId)
+        static String updateTimeSequenceChecksum(String fixMessage, int seqNum, int ordId, Boolean doOrder = true)
         {
+            Match getridoffluff = Regex.Match(fixMessage, @".*10=\d+" + getSoh());
+
+            fixMessage = getridoffluff.Value;
             // Update Timestamp
-            fixMessage = Regex.Replace(fixMessage, getSoh() + "52=.*?" + getSoh(), getSoh() + "52=" + DateTime.Now.ToString("yyyyMMdd-H:mm:ss.fff") + getSoh());
+            fixMessage = Regex.Replace(fixMessage, getSoh() + "52=.*?" + getSoh(), getSoh() + "52=" + DateTime.UtcNow.ToString("yyyyMMdd-HH:mm:ss") + getSoh());
 
             // Update Sequence Number
             fixMessage = Regex.Replace(fixMessage, getSoh() + "34=.*?" + getSoh(), getSoh() + "34=" + seqNum + getSoh());
 
             //update orderID
-            fixMessage = Regex.Replace(fixMessage, getSoh() + "11=.*?" + getSoh(), getSoh() + "11=" + ordId.ToString() + "/" + DateTime.Now.ToString("yyyy-MM-dd-HH:mm") + getSoh());
+            if (doOrder == true) {
+            	fixMessage = Regex.Replace(fixMessage, getSoh() + "11=.*?" + getSoh(), getSoh() + "11=" + ordId.ToString() + "/" + DateTime.UtcNow.ToString("yyyy-MM-dd-HH:mm") + getSoh());
+            }
             
             // Update Length
             int length = fixMessage.IndexOf(getSoh() + "10=") - fixMessage.IndexOf(getSoh() + "35=");
