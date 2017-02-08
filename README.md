@@ -19,7 +19,7 @@ Input file should be a TCPDump or Wireshark capture of a legitimate FIX conversa
 License:
  
 Fizzer is released under the Reciprocal Public License 1.5 (RPL1.5)
-http://www.opensource.org/licenses/rpl1.5Fizzer
+https://opensource.org/licenses/RPL-1.5
 
 ===========================================
 Frans Lategan - Made a few changes to use UTC time, update sequence numbers if that is sent from the server, and get rid of some extra fluff in .pcap files.
