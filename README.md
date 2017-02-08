@@ -1,12 +1,18 @@
 Fizzer - FIX Fuzzing Framework
 ===========================================
-Authors: 
+Original Authors: 
 
 Brian Holyfield - Gotham Digital Science 
 Michael Hanchak - Gotham Digital Science 
 
 www.gdssecurity.com
 labs@gdssecurity.com
+
+Small changes:
+Frans Lategan - Made a few changes to use UTC time, update sequence numbers if that is sent from the server, and get rid of some extra fluff in .pcap files.
+
+Also fixed the logon message that seemed to use incorrect parts.
+Other minor changes to make it work better with the specific FIX implementation I came across. YMMV
 
 ===========================================
 Usage:
@@ -22,7 +28,4 @@ Fizzer is released under the Reciprocal Public License 1.5 (RPL1.5)
 https://opensource.org/licenses/RPL-1.5
 
 ===========================================
-Frans Lategan - Made a few changes to use UTC time, update sequence numbers if that is sent from the server, and get rid of some extra fluff in .pcap files.
 
-Also fixed the logon message that seemed to use incorrect parts.
-Other minor changes to make it work better with the specific FIX implementation I came across.
